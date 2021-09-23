@@ -19,7 +19,8 @@ WT_a_log10 = np.log10(GC_ODs_N.loc[:, 'WT_a'])
 def sigmoid(x, L ,x0, k, b):
     y = L / (1 + np.exp(-k*(x-x0)))+b
     return y
-
+model_parameters = pd.read_csv("Model_Parameters_CEM.csv",header=0).dropna(axis=0, how='any')
+model_parameters_dict = {key: val for key, val in zip(model_parameters["Parameter Name"],model_parameters["Value"])}
 p0 = [max(WT_a_log10), np.median(Time), 1, min(WT_a_log10)]  # this is an mandatory initial guess
 popt, pcov = curve_fit(sigmoid, Time, WT_a_log10, p0, method='dogbox')
 
@@ -45,17 +46,15 @@ plt.show()
 
 # MCP geometry
 radius_mcp = 7e-8
-mcp_surface_area = 4*np.pi*(radius_mcp**2)
-mcp_volume = (4/3)*np.pi*(radius_mcp**3)
+mcp_surface_area = model_parameters_dict["mcp_surface_area"]
+mcp_volume =  model_parameters_dict["mcp_volume"]
 
 # cell geometry
-cell_radius = 0.375e-6
-cell_length = 2.47e-6
-cell_surface_area = 2*np.pi*cell_radius*cell_length
-cell_volume = 4*np.pi/3*(cell_radius)**3 + np.pi*(cell_length - 2*cell_radius)*(cell_radius**2)
+cell_surface_area = model_parameters_dict["cell_surface_area"]
+cell_volume = model_parameters_dict["cell_volume"]
 
 # external volume geometry
-external_volume = 5e-5
+external_volume =model_parameters_dict["external_volume"]
 wild_type_model_each_step_update = WildTypeMassUpdate(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
                                      cell_surface_area, cell_volume, external_volume)
 wild_type_model_each_step = WildTypeEachStep(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
@@ -64,8 +63,8 @@ wild_type_model_disc = WildTypeDiscrete(fit_fun, Time.iloc[-1], mcp_surface_area
                                          cell_surface_area, cell_volume, external_volume)
 wild_type_model_cont = WildTypeContinuous(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
                                            cell_surface_area, cell_volume, external_volume)
-PermMCPPolar =10 ** -2
-PermMCPNonPolar = 5 * 10 ** -3
+PermMCPPolar =model_parameters_dict["PermMCPPolar"]
+PermMCPNonPolar = model_parameters_dict["PermMCPNonPolar"]
 
 # initialize parameters
 params = {'PermMCPPropanediol': PermMCPPolar,
@@ -73,24 +72,24 @@ params = {'PermMCPPropanediol': PermMCPPolar,
             'PermMCPPropanol': PermMCPPolar,
             'PermMCPPropionyl': PermMCPNonPolar,
             'PermMCPPropionate': PermMCPPolar,
-            'nmcps': 10,
-            'PermCellPropanediol': 10**-4,
-            'PermCellPropionaldehyde': 10**-2,
-            'PermCellPropanol': 10**-4,
-            'PermCellPropionyl': 10**-5,
-            'PermCellPropionate': 10**-7,
-            'VmaxCDEf': (3e2)*(1e2),
-            'KmCDEPropanediol': 0.5,
-            'VmaxPf': (3e2)*(1e2),
-            'KmPfPropionaldehyde': 0.5,
-            'VmaxPr': (3e2)*(1e2),
-            'KmPrPropionyl':  0.5,
-            'VmaxQf': (3e2)*(1e2),
-            'KmQfPropionaldehyde':  0.5,
-            'VmaxQr': (3e2)*(1e2),
-            'KmQrPropanol':  0.5,
-            'VmaxLf': (1e2),
-            'KmLPropionyl': 0.5}
+            'nmcps': model_parameters_dict["nmcps"],
+            'PermCellPropanediol': model_parameters_dict["PermCellPropanediol"],
+            'PermCellPropionaldehyde':  model_parameters_dict["PermCellPropionaldehyde"],
+            'PermCellPropanol':  model_parameters_dict["PermCellPropanol"],
+            'PermCellPropionyl':  model_parameters_dict["PermCellPropionyl"],
+            'PermCellPropionate':  model_parameters_dict["PermCellPropionate"],
+            'VmaxCDEf': model_parameters_dict["VmaxCDEf"],
+            'KmCDEPropanediol':  model_parameters_dict["KmCDEPropanediol"],
+            'VmaxPf':  model_parameters_dict["VmaxPf"],
+            'KmPfPropionaldehyde':  model_parameters_dict["KmPfPropionaldehyde"],
+            'VmaxPr':  model_parameters_dict["VmaxPr"],
+            'KmPrPropionyl':  model_parameters_dict["KmPrPropionyl"],
+            'VmaxQf':  model_parameters_dict["VmaxQf"],
+            'KmQfPropionaldehyde':   model_parameters_dict["KmQfPropionaldehyde"],
+            'VmaxQr':  model_parameters_dict["VmaxQr"],
+            'KmQrPropanol':  model_parameters_dict["KmQrPropanol"],
+            'VmaxLf':  model_parameters_dict["VmaxLf"],
+            'KmLPropionyl':  model_parameters_dict["KmLPropionyl"]}
 
 # initialize initial conditions
 init_conds = {'PROPANEDIOL_MCP_INIT': 0,
