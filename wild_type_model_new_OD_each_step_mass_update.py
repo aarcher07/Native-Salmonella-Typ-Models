@@ -21,7 +21,7 @@ import time
 import matplotlib.pyplot as plt
 from constants import HRS_TO_SECS, VARIABLE_INIT_NAMES, OD_TO_COUNT_CONC, MODEL_PARAMETER_LIST
 
-class WildType:
+class WildTypeMassUpdate:
     def __init__(self, optical_density_ts, fin_exp_time, mcp_surface_area, mcp_volume,
                  cell_surface_area, cell_volume, external_volume):
         """
@@ -52,7 +52,7 @@ class WildType:
         self.nvars = 5*3
         self.optical_density_ts = optical_density_ts
         self.fin_exp_time = fin_exp_time
-        self.n_discrete_tp = 100
+        self.n_discrete_tp = 300
         self._discretize_optical_density()
 
         # set jacobian for ODE integration
@@ -181,7 +181,7 @@ class WildType:
         discretizes continuous optical density into a step function
         """
         time_discrete = np.linspace(0, self.fin_exp_time, num=self.n_discrete_tp)
-        self.time_discrete  = time_discrete
+        self.time_discrete = time_discrete
         optical_density_ts_disc= []
 
         for i in range(self.n_discrete_tp - 1):

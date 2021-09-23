@@ -21,7 +21,7 @@ import time
 import matplotlib.pyplot as plt
 from constants import HRS_TO_SECS, VARIABLE_INIT_NAMES, OD_TO_COUNT_CONC, MODEL_PARAMETER_LIST
 
-class WildType:
+class WildTypeContinuous:
     def __init__(self, optical_density_ts, fin_exp_time, mcp_surface_area, mcp_volume,
                  cell_surface_area, cell_volume, external_volume):
         """
@@ -52,8 +52,6 @@ class WildType:
         self.nvars = 5*3
         self.optical_density_ts = optical_density_ts
         self.fin_exp_time = fin_exp_time
-        self.n_discrete_tp = 100
-        self._discretize_optical_density()
 
         # set jacobian for ODE integration
         self._set_symbolic_state_vars()
@@ -98,7 +96,7 @@ class WildType:
         d = np.zeros((len(x))).tolist()  # convert to list to allow use of symbolic derivatives
 
         # differential equation parameters
-        ncells = params['ncells']
+        ncells = self.optical_density_ts(t) * OD_TO_COUNT_CONC * self.external_volume
         nmcps = params['nmcps']
         
 
@@ -175,20 +173,6 @@ class WildType:
         sderiv_jac_conc_fun_lam = sp.lambdify((self.x_sp,self.params_sens_sp), self.sderiv_jac_conc_sp, 'numpy')
         self._sderiv_jac_conc_fun = lambda t,x,params_sens_dict: sderiv_jac_conc_fun_lam(x,params_sens_dict.values())
 
-
-    def _discretize_optical_density(self):
-        """
-        discretizes continuous optical density into a step function
-        """
-        time_discrete = np.linspace(0, self.fin_exp_time, num=self.n_discrete_tp)
-        self.time_discrete  = time_discrete
-        optical_density_ts_disc= []
-
-        for i in range(self.n_discrete_tp - 1):
-            mean_OD = quad(self.optical_density_ts, time_discrete[i], time_discrete[i + 1])[0] / (time_discrete[i+1] - time_discrete[i])
-            optical_density_ts_disc.append(mean_OD)
-        self.optical_density_ts_disc = optical_density_ts_disc
-
     def generate_time_series(self,init_conds, params):
         """
         Generates the time series associated with the initial conditions, init_conds,
@@ -203,31 +187,14 @@ class WildType:
         y0 = np.zeros(self.nvars)
         for i, init_names in enumerate(VARIABLE_INIT_NAMES):
             y0[i] = init_conds[init_names]
-        time_concat = []
-        sol_concat = []
 
-        for i in range(self.n_discrete_tp - 1):
+        params['ncells'] = 0
+        ds = lambda t, x: self._sderiv(t, x, params)
+        ds_jac = lambda t, x: self._sderiv_jac_conc_fun(t, x, params)
 
-            #create OD problem
-            params["ncells"] = self.optical_density_ts_disc[i] * OD_TO_COUNT_CONC * self.external_volume
-            ds = lambda t, x: self._sderiv(t, x, params)
-            ds_jac = lambda t, x: self._sderiv_jac_conc_fun(t, x, params)
+        #solve ODE
+        sol = solve_ivp(ds, [0, self.fin_exp_time * HRS_TO_SECS], y0, method="BDF", jac=ds_jac,
+                        t_eval=np.logspace(-15, np.log10(self.fin_exp_time * HRS_TO_SECS), 100),atol=1e-2, rtol=1e-2)
 
-            #solve ODE
-            sol = solve_ivp(ds, [self.time_discrete[i] * HRS_TO_SECS, self.time_discrete[i + 1] * HRS_TO_SECS], y0, method="BDF", jac=ds_jac,
-                            t_eval=np.linspace(self.time_discrete[i] * HRS_TO_SECS, self.time_discrete[i + 1] * HRS_TO_SECS, num=5), atol=1e-6,
-                            rtol=1e-6)
-
-            # store
-            time_concat = np.concatenate((time_concat, sol.t))
-            sol_concat.append(sol.y.T)
-
-            # reinitialize
-            if i < self.n_discrete_tp - 2:
-                print(self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])
-                y0 = sol.y[:, -1].copy()
-                y0[:10] = (self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])*y0[:10]
-        sol_concat = np.concatenate(sol_concat)
-
-        return time_concat, sol_concat
+        return sol.t, sol.y.T
 

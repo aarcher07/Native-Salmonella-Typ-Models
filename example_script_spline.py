@@ -13,7 +13,7 @@ WT_a_log10 = np.log10(GC_ODs_N.loc[:, 'WT_a'])
 spllog10 = csaps(Time, WT_a_log10, smooth=0.01)
 
 # plot log10 data and spline
-t = np.linspace(0, Time.iloc[-1] + 40, num=int(1e2))
+t = np.linspace(0, Time.iloc[-1] + 10, num=int(1e2))
 plt.scatter(Time, WT_a_log10)
 plt.plot(t, spllog10(t))
 plt.legend(['data', 'spline'], loc='upper right')

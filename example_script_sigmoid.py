@@ -1,4 +1,8 @@
 from wild_type_model import WildType
+from wild_type_model_new_OD_each_step import WildTypeEachStep
+from wild_type_model_new_OD_each_step_mass_update import WildTypeMassUpdate
+from wild_type_model_input_discrete import WildTypeDiscrete
+from wild_type_model_input_continuous import WildTypeContinuous
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,7 +26,7 @@ popt, pcov = curve_fit(sigmoid, Time, WT_a_log10, p0, method='dogbox')
 fit_fun_log10 = lambda t: sigmoid(t, *popt)
 
 # plot log10 data and spline
-t = np.linspace(0, Time.iloc[-1] + 100, num=int(1e3))
+t = np.linspace(0, Time.iloc[-1] + 10, num=int(1e3))
 plt.scatter(Time, WT_a_log10)
 plt.plot(t, fit_fun_log10(t))
 plt.legend(['data', 'Sigmoid'], loc='upper right')
@@ -52,9 +56,14 @@ cell_volume = 4*np.pi/3*(cell_radius)**3 + np.pi*(cell_length - 2*cell_radius)*(
 
 # external volume geometry
 external_volume = 5e-5
-wild_type_model = WildType(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
-                           cell_surface_area, cell_volume, external_volume)
-
+wild_type_model_each_step_update = WildTypeMassUpdate(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
+                                     cell_surface_area, cell_volume, external_volume)
+wild_type_model_each_step = WildTypeEachStep(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
+                                        cell_surface_area, cell_volume, external_volume)
+wild_type_model_disc = WildTypeDiscrete(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
+                                         cell_surface_area, cell_volume, external_volume)
+wild_type_model_cont = WildTypeContinuous(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
+                                           cell_surface_area, cell_volume, external_volume)
 PermMCPPolar =10 ** -2
 PermMCPNonPolar = 5 * 10 ** -3
 
@@ -101,49 +110,78 @@ init_conds = {'PROPANEDIOL_MCP_INIT': 0,
               'PROPIONATE_EXT_INIT': 0}
 
 # run model for parameter set
-time_concat, sol_concat = wild_type_model.generate_time_series(init_conds, params)
+time_each_step_update, sol_each_step_update = wild_type_model_each_step_update.generate_time_series(init_conds, params)
+time_concat_each_step, sol_concat_each_step = wild_type_model_each_step.generate_time_series(init_conds, params)
+time_concat_disc, sol_concat_disc = wild_type_model_disc.generate_time_series(init_conds, params)
+time_concat_cont, sol_concat_cont = wild_type_model_cont.generate_time_series(init_conds, params)
 
+names = ['Propanediol', 'Propionaldehyde', 'Propanol', 'Propionyl', 'Propionate']
+c_test = ['-+','-+','-+','-+','-+']
+c=['-*','-*','-*','-*','-*']
 # plot MCP solutions
-yext = sol_concat[:, :5]
-plt.plot(time_concat/HRS_TO_SECS, yext)
-plt.legend(['Propanediol', 'Propionaldehyde', 'Propanol', 'Propionyl', 'Propionate'], loc='upper right')
-plt.title('Plot of MCP concentrations')
-plt.xlabel('time (hr)')
-plt.ylabel('concentration (mM)')
-plt.show()
+ymcp_each_step_update = sol_each_step_update[:, :5]
+ymcp_each_step = sol_concat_each_step[:, :5]
+ymcp_disc = sol_concat_disc[:, :5]
+ymcp_cont = sol_concat_cont[:, :5]
+
+for i in range(5):
+    plt.plot(time_each_step_update/HRS_TO_SECS, ymcp_each_step_update[:,i],label="Model 1")
+    plt.plot(time_concat_each_step/HRS_TO_SECS, ymcp_each_step[:,i],label="Model 2")
+    plt.plot(time_concat_disc/HRS_TO_SECS, ymcp_disc[:,i],label="Model 3")
+    plt.plot(time_concat_cont/HRS_TO_SECS, ymcp_cont[:,i],label="Model 4")
+
+    plt.legend()
+    plt.title('Plot of MCP ' +names[i]+ ' concentrations')
+    plt.xlabel('time (hr)')
+    plt.ylabel('concentration (mM)')
+    plt.show()
 
 # plot cellular solution
-yext = sol_concat[:, 5:10]
-plt.plot(time_concat/HRS_TO_SECS, yext)
-plt.legend(['Propanediol', 'Propionaldehyde', 'Propanol', 'Propionyl', 'Propionate'], loc='upper right')
-plt.title('Plot of cytosol concentrations')
-plt.xlabel('time (hr)')
-plt.ylabel('concentration (mM)')
-plt.show()
+ycell_each_step_update = sol_each_step_update[:, 5:10]
+ycell_each_step = sol_concat_each_step[:, 5:10]
+ycell_disc = sol_concat_disc[:, 5:10]
+ycell_cont = sol_concat_cont[:, 5:10]
+for i in range(5):
+    plt.plot(time_each_step_update/HRS_TO_SECS, ycell_each_step_update[:,i],label="Model 1")
+    plt.plot(time_concat_each_step/HRS_TO_SECS, ycell_each_step[:,i],label="Model 2")
+    plt.plot(time_concat_disc/HRS_TO_SECS, ycell_disc[:,i],label="Model 3")
+    plt.plot(time_concat_cont/HRS_TO_SECS, ycell_cont[:,i],label="Model 4")
+    plt.legend()
+    plt.title('Plot of cytosol ' +names[i]+ ' concentrations')
+    plt.xlabel('time (hr)')
+    plt.ylabel('concentration (mM)')
+    plt.show()
 
 # plot external solution
-yext = sol_concat[:, 10:]
-plt.plot(time_concat/HRS_TO_SECS, yext)
-plt.legend(['Propanediol', 'Propionaldehyde', 'Propanol', 'Propionyl', 'Propionate'], loc='upper right')
-plt.title('Plot of external concentrations')
-plt.xlabel('time (hr)')
-plt.ylabel('concentration (mM)')
-plt.show()
+yext_each_step_update = sol_each_step_update[:, 10:]
+yext_each_step = sol_concat_each_step[:, 10:]
+yext_disc = sol_concat_disc[:,  10:]
+yext_cont = sol_concat_cont[:,  10:]
+for i in range(5):
+    plt.plot(time_each_step_update/HRS_TO_SECS, yext_each_step_update[:,i],label="Model 1")
+    plt.plot(time_each_step_update/HRS_TO_SECS, yext_each_step[:,i],label="Model 2")
+    plt.plot(time_concat_disc/HRS_TO_SECS, yext_disc[:,i],label="Model 3")
+    plt.plot(time_concat_cont/HRS_TO_SECS, yext_cont[:,i],label="Model 4")
+    plt.title('Plot of external ' +names[i]+ ' concentrations')
+    plt.xlabel('time (hr)')
+    plt.ylabel('concentration (mM)')
+    plt.legend()
+    plt.show()
 
 init_conds_list = np.array([val for val in init_conds.values()])
 
 # conservation of mass formula
-mcp_masses_org = init_conds_list[:5] * mcp_volume * params["nmcps"] * wild_type_model.optical_density_ts_disc[0]\
+mcp_masses_org = init_conds_list[:5] * mcp_volume * params["nmcps"] * wild_type_model_each_step_update.optical_density_ts_disc[0]\
                  * OD_TO_COUNT_CONC * external_volume
-cell_masses_org = init_conds_list[5:10] * cell_volume * wild_type_model.optical_density_ts_disc[0]* OD_TO_COUNT_CONC\
+cell_masses_org = init_conds_list[5:10] * cell_volume * wild_type_model_each_step_update.optical_density_ts_disc[0]* OD_TO_COUNT_CONC\
                   * external_volume
 ext_masses_org = init_conds_list[10:] * external_volume
 
-mcp_masses_fin = sol_concat[-1,:5] * mcp_volume * params["nmcps"] * wild_type_model.optical_density_ts_disc[-1] \
+mcp_masses_fin = sol_each_step_update[-1,:5] * mcp_volume * params["nmcps"] * wild_type_model_each_step_update.optical_density_ts_disc[-1] \
                  * OD_TO_COUNT_CONC * external_volume
-cell_masses_fin = sol_concat[-1,5:10] * cell_volume * wild_type_model.optical_density_ts_disc[-1] * OD_TO_COUNT_CONC \
+cell_masses_fin = sol_each_step_update[-1,5:10] * cell_volume * wild_type_model_each_step_update.optical_density_ts_disc[-1] * OD_TO_COUNT_CONC \
                   * external_volume
-ext_masses_fin = sol_concat[-1,10:] * external_volume
+ext_masses_fin = sol_each_step_update[-1,10:] * external_volume
 
 print("Original mass: " + str(ext_masses_org.sum() + cell_masses_org.sum() + mcp_masses_org.sum()))
 print("Final mass: " + str(ext_masses_fin.sum() + cell_masses_fin.sum() + mcp_masses_fin.sum()))
