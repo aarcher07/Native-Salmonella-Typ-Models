@@ -6,6 +6,7 @@ from wild_type_model_input_continuous import WildTypeContinuous
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import sympy as sp
 from scipy.optimize import curve_fit
 from constants import HRS_TO_SECS, OD_TO_COUNT_CONC
 
@@ -20,9 +21,10 @@ def sigmoid(x, L ,x0, k, b):
     y = L / (1 + np.exp(-k*(x-x0)))+b
     return y
 
+model_parameters = pd.read_csv("Model_Parameters_CEM.csv",header=0).dropna(axis=0, how='any')
+model_parameters_dict = {key: val for key, val in zip(model_parameters["Parameter Name"],model_parameters["Value"])}
 p0 = [max(WT_a_log10), np.median(Time), 1, min(WT_a_log10)]  # this is an mandatory initial guess
 popt, pcov = curve_fit(sigmoid, Time, WT_a_log10, p0, method='dogbox')
-
 fit_fun_log10 = lambda t: sigmoid(t, *popt)
 
 # plot log10 data and spline
@@ -42,30 +44,33 @@ plt.legend(['data', 'Sigmoid'], loc='upper right')
 plt.show()
 
 # create model
+def sigmoid(x, L ,x0, k, b):
+    y = L / (1 + sp.exp(-k*(x-x0)))+b
+    return y
+fit_fun_log10 = lambda t: sigmoid(t, *popt)
+fit_fun = lambda t: 10**fit_fun_log10(t)
 
 # MCP geometry
 radius_mcp = 7e-8
-mcp_surface_area = 4*np.pi*(radius_mcp**2)
-mcp_volume = (4/3)*np.pi*(radius_mcp**3)
+mcp_surface_area = model_parameters_dict["mcp_surface_area"]
+mcp_volume =  model_parameters_dict["mcp_volume"]
 
 # cell geometry
-cell_radius = 0.375e-6
-cell_length = 2.47e-6
-cell_surface_area = 2*np.pi*cell_radius*cell_length
-cell_volume = 4*np.pi/3*(cell_radius)**3 + np.pi*(cell_length - 2*cell_radius)*(cell_radius**2)
+cell_surface_area = model_parameters_dict["cell_surface_area"]
+cell_volume = model_parameters_dict["cell_volume"]
 
 # external volume geometry
-external_volume = 5e-5
+external_volume =model_parameters_dict["external_volume"]
 wild_type_model_each_step_update = WildTypeMassUpdate(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
                                      cell_surface_area, cell_volume, external_volume)
 wild_type_model_each_step = WildTypeEachStep(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
                                         cell_surface_area, cell_volume, external_volume)
-wild_type_model_disc = WildTypeDiscrete(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
-                                         cell_surface_area, cell_volume, external_volume)
+#wild_type_model_disc = WildTypeDiscrete(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
+#                                         cell_surface_area, cell_volume, external_volume)
 wild_type_model_cont = WildTypeContinuous(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
-                                           cell_surface_area, cell_volume, external_volume)
-PermMCPPolar =10 ** -2
-PermMCPNonPolar = 5 * 10 ** -3
+                                          cell_surface_area, cell_volume, external_volume)
+PermMCPPolar =model_parameters_dict["PermMCPPolar"]
+PermMCPNonPolar = model_parameters_dict["PermMCPNonPolar"]
 
 # initialize parameters
 params = {'PermMCPPropanediol': PermMCPPolar,
@@ -73,32 +78,32 @@ params = {'PermMCPPropanediol': PermMCPPolar,
             'PermMCPPropanol': PermMCPPolar,
             'PermMCPPropionyl': PermMCPNonPolar,
             'PermMCPPropionate': PermMCPPolar,
-            'nmcps': 10,
-            'PermCellPropanediol': 10**-4,
-            'PermCellPropionaldehyde': 10**-2,
-            'PermCellPropanol': 10**-4,
-            'PermCellPropionyl': 10**-5,
-            'PermCellPropionate': 10**-7,
-            'VmaxCDEf': (3e2)*(1e2),
-            'KmCDEPropanediol': 0.5,
-            'VmaxPf': (3e2)*(1e2),
-            'KmPfPropionaldehyde': 0.5,
-            'VmaxPr': (3e2)*(1e2),
-            'KmPrPropionyl':  0.5,
-            'VmaxQf': (3e2)*(1e2),
-            'KmQfPropionaldehyde':  0.5,
-            'VmaxQr': (3e2)*(1e2),
-            'KmQrPropanol':  0.5,
-            'VmaxLf': (1e2),
-            'KmLPropionyl': 0.5}
+            'nmcps': model_parameters_dict["nmcp"],
+            'PermCellPropanediol': model_parameters_dict["PermCellPropanediol"],
+            'PermCellPropionaldehyde':  model_parameters_dict["PermCellPropionaldehyde"],
+            'PermCellPropanol':  model_parameters_dict["PermCellPropanol"],
+            'PermCellPropionyl':  model_parameters_dict["PermCellPropionyl"],
+            'PermCellPropionate':  model_parameters_dict["PermCellPropionate"],
+            'VmaxCDEf': model_parameters_dict["VmaxCDEf"],
+            'KmCDEPropanediol':  model_parameters_dict["KmCDEPropanediol"],
+            'VmaxPf':  model_parameters_dict["VmaxPf"],
+            'KmPfPropionaldehyde':  model_parameters_dict["KmPfPropionaldehyde"],
+            'VmaxPr':  model_parameters_dict["VmaxPr"],
+            'KmPrPropionyl':  model_parameters_dict["KmPrPropionyl"],
+            'VmaxQf':  model_parameters_dict["VmaxQf"],
+            'KmQfPropionaldehyde':   model_parameters_dict["KmQfPropionaldehyde"],
+            'VmaxQr':  model_parameters_dict["VmaxQr"],
+            'KmQrPropanol':  model_parameters_dict["KmQrPropanol"],
+            'VmaxLf':  model_parameters_dict["VmaxLf"],
+            'KmLPropionyl':  model_parameters_dict["KmLPropionyl"]}
 
 # initialize initial conditions
-init_conds = {'PROPANEDIOL_MCP_INIT': 0,
+init_conds = {'PROPANEDIOL_MCP_INIT': 50,
               'PROPIONALDEHYDE_MCP_INIT': 0,
               'PROPANOL_MCP_INIT': 0,
               'PROPIONYL_MCP_INIT': 0,
               'PROPIONATE_MCP_INIT': 0,
-              'PROPANEDIOL_CYTO_INIT': 0,
+              'PROPANEDIOL_CYTO_INIT': 50,
               'PROPIONALDEHYDE_CYTO_INIT': 0,
               'PROPANOL_CYTO_INIT': 0,
               'PROPIONYL_CYTO_INIT': 0,
@@ -112,7 +117,7 @@ init_conds = {'PROPANEDIOL_MCP_INIT': 0,
 # run model for parameter set
 time_each_step_update, sol_each_step_update = wild_type_model_each_step_update.generate_time_series(init_conds, params)
 time_concat_each_step, sol_concat_each_step = wild_type_model_each_step.generate_time_series(init_conds, params)
-time_concat_disc, sol_concat_disc = wild_type_model_disc.generate_time_series(init_conds, params)
+#time_concat_disc, sol_concat_disc = wild_type_model_disc.generate_time_series(init_conds, params)
 time_concat_cont, sol_concat_cont = wild_type_model_cont.generate_time_series(init_conds, params)
 
 names = ['Propanediol', 'Propionaldehyde', 'Propanol', 'Propionyl', 'Propionate']
@@ -121,52 +126,55 @@ c=['-*','-*','-*','-*','-*']
 # plot MCP solutions
 ymcp_each_step_update = sol_each_step_update[:, :5]
 ymcp_each_step = sol_concat_each_step[:, :5]
-ymcp_disc = sol_concat_disc[:, :5]
+#ymcp_disc = sol_concat_disc[:, :5]
 ymcp_cont = sol_concat_cont[:, :5]
 
 for i in range(5):
     plt.plot(time_each_step_update/HRS_TO_SECS, ymcp_each_step_update[:,i],label="Model 1")
     plt.plot(time_concat_each_step/HRS_TO_SECS, ymcp_each_step[:,i],label="Model 2")
-    plt.plot(time_concat_disc/HRS_TO_SECS, ymcp_disc[:,i],label="Model 3")
-    plt.plot(time_concat_cont/HRS_TO_SECS, ymcp_cont[:,i],label="Model 4")
+#    plt.plot(time_concat_disc/HRS_TO_SECS, ymcp_disc[:,i],label="Model 3")
+    plt.plot(time_concat_cont/HRS_TO_SECS, ymcp_cont[:,i],label="Model 3")
 
     plt.legend()
     plt.title('Plot of MCP ' +names[i]+ ' concentrations')
     plt.xlabel('time (hr)')
     plt.ylabel('concentration (mM)')
-    plt.show()
+    plt.savefig('figures/MCP_' +names[i]+ '_concentration_plots.png', bbox_inches='tight')
+    plt.close()
 
 # plot cellular solution
 ycell_each_step_update = sol_each_step_update[:, 5:10]
 ycell_each_step = sol_concat_each_step[:, 5:10]
-ycell_disc = sol_concat_disc[:, 5:10]
+#ycell_disc = sol_concat_disc[:, 5:10]
 ycell_cont = sol_concat_cont[:, 5:10]
 for i in range(5):
     plt.plot(time_each_step_update/HRS_TO_SECS, ycell_each_step_update[:,i],label="Model 1")
     plt.plot(time_concat_each_step/HRS_TO_SECS, ycell_each_step[:,i],label="Model 2")
-    plt.plot(time_concat_disc/HRS_TO_SECS, ycell_disc[:,i],label="Model 3")
-    plt.plot(time_concat_cont/HRS_TO_SECS, ycell_cont[:,i],label="Model 4")
+    #plt.plot(time_concat_disc/HRS_TO_SECS, ycell_disc[:,i],label="Model 3")
+    plt.plot(time_concat_cont/HRS_TO_SECS, ycell_cont[:,i],label="Model 3")
     plt.legend()
     plt.title('Plot of cytosol ' +names[i]+ ' concentrations')
     plt.xlabel('time (hr)')
     plt.ylabel('concentration (mM)')
-    plt.show()
+    plt.savefig('figures/cyto_' +names[i]+ '_concentration_plots.png', bbox_inches='tight')
+    plt.close()
 
 # plot external solution
 yext_each_step_update = sol_each_step_update[:, 10:]
 yext_each_step = sol_concat_each_step[:, 10:]
-yext_disc = sol_concat_disc[:,  10:]
+#yext_disc = sol_concat_disc[:,  10:]
 yext_cont = sol_concat_cont[:,  10:]
 for i in range(5):
     plt.plot(time_each_step_update/HRS_TO_SECS, yext_each_step_update[:,i],label="Model 1")
     plt.plot(time_each_step_update/HRS_TO_SECS, yext_each_step[:,i],label="Model 2")
-    plt.plot(time_concat_disc/HRS_TO_SECS, yext_disc[:,i],label="Model 3")
-    plt.plot(time_concat_cont/HRS_TO_SECS, yext_cont[:,i],label="Model 4")
+    #plt.plot(time_concat_disc/HRS_TO_SECS, yext_disc[:,i],label="Model 3")
+    plt.plot(time_concat_cont/HRS_TO_SECS, yext_cont[:,i],label="Model 3")
     plt.title('Plot of external ' +names[i]+ ' concentrations')
     plt.xlabel('time (hr)')
     plt.ylabel('concentration (mM)')
     plt.legend()
-    plt.show()
+    plt.savefig('figures/ext_' +names[i]+ '_concentration_plots.png', bbox_inches='tight')
+    plt.close()
 
 init_conds_list = np.array([val for val in init_conds.values()])
 

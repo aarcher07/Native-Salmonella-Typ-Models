@@ -111,7 +111,7 @@ class WildTypeContinuous:
         R_Lf = params["VmaxLf"]*x[8]/(x[8] + params["KmLPropionyl"])
 
 
-        d[0] = -R_CDE + self.MCP_surf_MCP_vol_ratio *params['PermMCPPropanediol'] * (x[0 + n_compounds_cell] - x[0])  # microcompartment equation for G
+        d[0] = - R_CDE + self.MCP_surf_MCP_vol_ratio *params['PermMCPPropanediol'] * (x[0 + n_compounds_cell] - x[0])  # microcompartment equation for G
         d[1] =  R_CDE -  R_Pf - R_Qf + R_Pr + R_Qr +self.MCP_surf_MCP_vol_ratio * params['PermMCPPropionaldehyde']* (x[1 + n_compounds_cell] - x[1])  # microcompartment equation for H
         d[2] = R_Qf - R_Qr + self.MCP_surf_MCP_vol_ratio * params['PermMCPPropanol'] * (x[2 + n_compounds_cell] - x[2])  # microcompartment equation for P
         d[3] = R_Pf - R_Pr + self.MCP_surf_MCP_vol_ratio * params['PermMCPPropionyl'] * (x[3 + n_compounds_cell] - x[3])  # microcompartment equation for P
@@ -157,7 +157,7 @@ class WildTypeContinuous:
         x_sp = getattr(self, 'x_sp', None)
         if x_sp is None:
             self._set_symbolic_state_vars()
-        self.sderiv_symbolic = self._sderiv(0, self.x_sp, self.params_sens_sp_dict)
+        self.sderiv_symbolic = self._sderiv(sp.symbols('t'), self.x_sp, self.params_sens_sp_dict)
 
 
     def _set_symbolic_sderiv_conc_fun(self):
@@ -170,8 +170,8 @@ class WildTypeContinuous:
             self._set_symbolic_sderiv()
             sderiv_symbolic = self.sderiv_symbolic
         self.sderiv_jac_conc_sp = sp.Matrix(sderiv_symbolic).jacobian(self.x_sp)
-        sderiv_jac_conc_fun_lam = sp.lambdify((self.x_sp,self.params_sens_sp), self.sderiv_jac_conc_sp, 'numpy')
-        self._sderiv_jac_conc_fun = lambda t,x,params_sens_dict: sderiv_jac_conc_fun_lam(x,params_sens_dict.values())
+        sderiv_jac_conc_fun_lam = sp.lambdify((sp.symbols('t'),self.x_sp,self.params_sens_sp), self.sderiv_jac_conc_sp, 'numpy')
+        self._sderiv_jac_conc_fun = lambda t,x,params_sens_dict: sderiv_jac_conc_fun_lam(t,x,params_sens_dict.values())
 
     def generate_time_series(self,init_conds, params):
         """
@@ -188,13 +188,13 @@ class WildTypeContinuous:
         for i, init_names in enumerate(VARIABLE_INIT_NAMES):
             y0[i] = init_conds[init_names]
 
-        params['ncells'] = 0
+        params['ncells'] = None
         ds = lambda t, x: self._sderiv(t, x, params)
         ds_jac = lambda t, x: self._sderiv_jac_conc_fun(t, x, params)
 
         #solve ODE
-        sol = solve_ivp(ds, [0, self.fin_exp_time * HRS_TO_SECS], y0, method="BDF", jac=ds_jac,
-                        t_eval=np.logspace(-15, np.log10(self.fin_exp_time * HRS_TO_SECS), 100),atol=1e-2, rtol=1e-2)
+        sol = solve_ivp(ds, [0, self.fin_exp_time * HRS_TO_SECS], y0, method="LSODA",#, jac=ds_jac,
+                        t_eval=np.linspace(0, self.fin_exp_time * HRS_TO_SECS, 1000),atol=1e-6, rtol=1e-6)
 
         return sol.t, sol.y.T
 

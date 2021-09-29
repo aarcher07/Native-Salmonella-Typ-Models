@@ -224,7 +224,6 @@ class WildType:
 
             # reinitialize
             if i < self.n_discrete_tp - 2:
-                print(self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])
                 y0 = sol.y[:, -1].copy()
                 y0[:10] = (self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])*y0[:10]
         sol_concat = np.concatenate(sol_concat)
