@@ -52,7 +52,7 @@ class WildTypeMassUpdate:
         self.nvars = 5*3
         self.optical_density_ts = optical_density_ts
         self.fin_exp_time = fin_exp_time
-        self.n_discrete_tp = 10000
+        self.n_discrete_tp = 1000
         self._discretize_optical_density()
 
         # set jacobian for ODE integration
