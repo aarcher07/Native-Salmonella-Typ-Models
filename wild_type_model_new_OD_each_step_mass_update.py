@@ -52,7 +52,7 @@ class WildTypeMassUpdate:
         self.nvars = 5*3
         self.optical_density_ts = optical_density_ts
         self.fin_exp_time = fin_exp_time
-        self.n_discrete_tp = 300
+        self.n_discrete_tp = 10000
         self._discretize_optical_density()
 
         # set jacobian for ODE integration
@@ -214,7 +214,7 @@ class WildTypeMassUpdate:
             ds_jac = lambda t, x: self._sderiv_jac_conc_fun(t, x, params)
 
             #solve ODE
-            sol = solve_ivp(ds, [self.time_discrete[i] * HRS_TO_SECS, self.time_discrete[i + 1] * HRS_TO_SECS], y0, method="BDF", jac=ds_jac,
+            sol = solve_ivp(ds, [self.time_discrete[i] * HRS_TO_SECS, self.time_discrete[i + 1] * HRS_TO_SECS], y0, method="LSODA", #jac=ds_jac,
                             t_eval=np.linspace(self.time_discrete[i] * HRS_TO_SECS, self.time_discrete[i + 1] * HRS_TO_SECS, num=5), atol=1e-6,
                             rtol=1e-6)
 
@@ -224,7 +224,7 @@ class WildTypeMassUpdate:
 
             # reinitialize
             if i < self.n_discrete_tp - 2:
-                print(self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])
+                #print(self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])
                 y0 = sol.y[:, -1].copy()
                 y0[:10] = (self.optical_density_ts_disc[i]/self.optical_density_ts_disc[i+1])*y0[:10]
         sol_concat = np.concatenate(sol_concat)

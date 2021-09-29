@@ -98,14 +98,9 @@ class WildTypeDiscrete:
         d = np.zeros((len(x))).tolist()  # convert to list to allow use of symbolic derivatives
 
         # differential equation parameters
-        if t >= self.time_discrete[-1] * HRS_TO_SECS:
-            ncells = self.optical_density_ts_disc[-1] * OD_TO_COUNT_CONC * self.external_volume
-        else:
-            print(self.time_discrete[:-1])
-            bool_loc = ((self.time_discrete[:-1]* HRS_TO_SECS) <= t) *((self.time_discrete[1:]* HRS_TO_SECS) > t)
-            indices = np.where(bool_loc)[0]
-            print(indices)
-            ncells = self.optical_density_ts_disc[indices[0]] * OD_TO_COUNT_CONC * self.external_volume
+        bool_loc = ((self.time_discrete[:-1]* HRS_TO_SECS) <= t)*((self.time_discrete[1:]* HRS_TO_SECS) > t)
+        indices = np.where(bool_loc)[0]
+        ncells = self.optical_density_ts_disc[indices[0]] * OD_TO_COUNT_CONC * self.external_volume
         nmcps = params['nmcps']
         
 
@@ -166,7 +161,7 @@ class WildTypeDiscrete:
         x_sp = getattr(self, 'x_sp', None)
         if x_sp is None:
             self._set_symbolic_state_vars()
-        self.sderiv_symbolic = self._sderiv(0, self.x_sp, self.params_sens_sp_dict)
+        self.sderiv_symbolic = self._sderiv(sp.symbols('t'), self.x_sp, self.params_sens_sp_dict)
 
 
     def _set_symbolic_sderiv_conc_fun(self):
@@ -179,8 +174,8 @@ class WildTypeDiscrete:
             self._set_symbolic_sderiv()
             sderiv_symbolic = self.sderiv_symbolic
         self.sderiv_jac_conc_sp = sp.Matrix(sderiv_symbolic).jacobian(self.x_sp)
-        sderiv_jac_conc_fun_lam = sp.lambdify((self.x_sp,self.params_sens_sp), self.sderiv_jac_conc_sp, 'numpy')
-        self._sderiv_jac_conc_fun = lambda t,x,params_sens_dict: sderiv_jac_conc_fun_lam(x,params_sens_dict.values())
+        sderiv_jac_conc_fun_lam = sp.lambdify((sp.symbols('t'), self.x_sp,self.params_sens_sp), self.sderiv_jac_conc_sp, 'numpy')
+        self._sderiv_jac_conc_fun = lambda t,x,params_sens_dict: sderiv_jac_conc_fun_lam(t,x,params_sens_dict.values())
 
 
     def _discretize_optical_density(self):
@@ -211,7 +206,7 @@ class WildTypeDiscrete:
         for i, init_names in enumerate(VARIABLE_INIT_NAMES):
             y0[i] = init_conds[init_names]
 
-        params['ncells'] =self.optical_density_ts_disc[0] * OD_TO_COUNT_CONC * self.external_volume
+        params['ncells'] = None
         ds = lambda t, x: self._sderiv(t, x, params)
         ds_jac = lambda t, x: self._sderiv_jac_conc_fun(t, x, params)
 
