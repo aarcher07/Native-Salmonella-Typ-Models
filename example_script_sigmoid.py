@@ -9,6 +9,7 @@ import numpy as np
 import sympy as sp
 from scipy.optimize import curve_fit
 from constants import HRS_TO_SECS, OD_TO_COUNT_CONC
+from scipy.integrate import solve_ivp, quad
 
 GC_ODs_N = pd.read_csv("data/GC_ODs_N.csv")
 Time = GC_ODs_N.loc[:,'Time'].astype(np.float64)
@@ -17,31 +18,28 @@ Time = GC_ODs_N.loc[:,'Time'].astype(np.float64)
 WT_a_log10 = np.log10(GC_ODs_N.loc[:, 'WT_a'])
 
 # Taken from https://stackoverflow.com/questions/55725139/fit-sigmoid-function-s-shape-curve-to-data-using-python
-def sigmoid(x, L ,x0, k, b):
+def sigmoid1(x, L ,x0, k, b):
     y = L / (1 + np.exp(-k*(x-x0)))+b
     return y
 
 model_parameters = pd.read_csv("Model_Parameters_CEM.csv",header=0).dropna(axis=0, how='any')
 model_parameters_dict = {key: val for key, val in zip(model_parameters["Parameter Name"],model_parameters["Value"])}
 p0 = [max(WT_a_log10), np.median(Time), 1, min(WT_a_log10)]  # this is an mandatory initial guess
-popt, pcov = curve_fit(sigmoid, Time, WT_a_log10, p0, method='dogbox')
-fit_fun_log10 = lambda t: sigmoid(t, *popt)
+popt, pcov = curve_fit(sigmoid1, Time, WT_a_log10, p0, method='dogbox')
+fit_fun_log101 = lambda t: sigmoid1(t, *popt)
 
-# plot log10 data and spline
+# # plot log10 data and spline
 t = np.linspace(0, Time.iloc[-1] + 10, num=int(1e3))
-plt.scatter(Time, WT_a_log10)
-plt.plot(t, fit_fun_log10(t))
-plt.legend(['data', 'Sigmoid'], loc='upper right')
-plt.title('log(OD) fit to sigmoid function')
-plt.show()
+# plt.scatter(Time, WT_a_log10)
+# plt.plot(t, fit_fun_log10(t))
+# plt.legend(['data', 'Sigmoid'], loc='upper right')
+# plt.title('log(OD) fit to sigmoid function')
+# plt.show()
 
 # plot untransformed data spline
-fit_fun = lambda t: 10**fit_fun_log10(t)
-plt.scatter(Time, np.power(10,WT_a_log10))
-plt.plot(t, fit_fun(t))
-plt.title('log(OD) fit to sigmoid function transformed')
-plt.legend(['data', 'Sigmoid'], loc='upper right')
-plt.show()
+fit_fun1 = lambda t: 10**fit_fun_log101(t)
+#plt.scatter(Time, np.power(10,WT_a_log10),label='data')
+
 
 # create model
 def sigmoid(x, L ,x0, k, b):
@@ -61,13 +59,29 @@ cell_volume = model_parameters_dict["cell_volume"]
 
 # external volume geometry
 external_volume =model_parameters_dict["external_volume"]
-wild_type_model_each_step_update = WildTypeMassUpdate(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
-                                     cell_surface_area, cell_volume, external_volume)
-wild_type_model_each_step = WildTypeEachStep(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
-                                        cell_surface_area, cell_volume, external_volume)
+fin_exp_time = 0.05 #Time.iloc[-1] + 1
+n_discrete_tp = 100000
+optical_density_ts_disc = []
+time_discrete = np.linspace(0, fin_exp_time, num=n_discrete_tp)
+
+for i in range(n_discrete_tp - 1):
+    mean_OD = quad(fit_fun, time_discrete[i], time_discrete[i + 1])[0] / (time_discrete[i+1] - time_discrete[i])
+    optical_density_ts_disc.append(mean_OD)
+optical_density_ts_disc.append(mean_OD)
+
+plt.plot(time_discrete, fit_fun1(time_discrete),label='Sigmoid')
+plt.title('log(OD) fit to sigmoid function transformed')
+plt.step(time_discrete, optical_density_ts_disc, where='post', label="step function")
+plt.legend(loc='upper right')
+plt.savefig('figures/data_discretization_plots_ntimepts'+str(n_discrete_tp) + "_fintime" + str(fin_exp_time)+'.png', bbox_inches='tight')
+plt.close()
+wild_type_model_each_step_update = WildTypeMassUpdate(fit_fun, fin_exp_time, mcp_surface_area, mcp_volume,
+                                     cell_surface_area, cell_volume, external_volume,n_discrete_tp)
+wild_type_model_each_step = WildTypeEachStep(fit_fun, fin_exp_time, mcp_surface_area, mcp_volume,
+                                        cell_surface_area, cell_volume, external_volume,n_discrete_tp)
 #wild_type_model_disc = WildTypeDiscrete(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
 #                                         cell_surface_area, cell_volume, external_volume)
-wild_type_model_cont = WildTypeContinuous(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
+wild_type_model_cont = WildTypeContinuous(fit_fun, fin_exp_time, mcp_surface_area, mcp_volume,
                                           cell_surface_area, cell_volume, external_volume)
 PermMCPPolar =model_parameters_dict["PermMCPPolar"]
 PermMCPNonPolar = model_parameters_dict["PermMCPNonPolar"]
@@ -98,12 +112,12 @@ params = {'PermMCPPropanediol': PermMCPPolar,
             'KmLPropionyl':  model_parameters_dict["KmLPropionyl"]}
 
 # initialize initial conditions
-init_conds = {'PROPANEDIOL_MCP_INIT': 50,
+init_conds = {'PROPANEDIOL_MCP_INIT': 0,
               'PROPIONALDEHYDE_MCP_INIT': 0,
               'PROPANOL_MCP_INIT': 0,
               'PROPIONYL_MCP_INIT': 0,
               'PROPIONATE_MCP_INIT': 0,
-              'PROPANEDIOL_CYTO_INIT': 50,
+              'PROPANEDIOL_CYTO_INIT': 0,
               'PROPIONALDEHYDE_CYTO_INIT': 0,
               'PROPANOL_CYTO_INIT': 0,
               'PROPIONYL_CYTO_INIT': 0,
@@ -113,6 +127,7 @@ init_conds = {'PROPANEDIOL_MCP_INIT': 50,
               'PROPANOL_EXT_INIT': 0,
               'PROPIONYL_EXT_INIT': 0,
               'PROPIONATE_EXT_INIT': 0}
+
 
 # run model for parameter set
 time_each_step_update, sol_each_step_update = wild_type_model_each_step_update.generate_time_series(init_conds, params)
@@ -139,7 +154,7 @@ for i in range(5):
     plt.title('Plot of MCP ' +names[i]+ ' concentrations')
     plt.xlabel('time (hr)')
     plt.ylabel('concentration (mM)')
-    plt.savefig('figures/MCP_' +names[i]+ '_concentration_plots.png', bbox_inches='tight')
+    plt.savefig('figures/MCP_' +names[i]+ '_concentration_plots_ntimepts'+str(n_discrete_tp) + "_fintime" + str(fin_exp_time) + '.png', bbox_inches='tight')
     plt.close()
 
 # plot cellular solution
@@ -156,7 +171,7 @@ for i in range(5):
     plt.title('Plot of cytosol ' +names[i]+ ' concentrations')
     plt.xlabel('time (hr)')
     plt.ylabel('concentration (mM)')
-    plt.savefig('figures/cyto_' +names[i]+ '_concentration_plots.png', bbox_inches='tight')
+    plt.savefig('figures/cyto_' +names[i]+ '_concentration_plots_ntimepts'+str(n_discrete_tp) + "_fintime" + str(fin_exp_time) + '.png', bbox_inches='tight')
     plt.close()
 
 # plot external solution
@@ -173,7 +188,7 @@ for i in range(5):
     plt.xlabel('time (hr)')
     plt.ylabel('concentration (mM)')
     plt.legend()
-    plt.savefig('figures/ext_' +names[i]+ '_concentration_plots.png', bbox_inches='tight')
+    plt.savefig('figures/ext_' +names[i]+ '_concentration_plots_ntimepts'+str(n_discrete_tp) + "_fintime" + str(fin_exp_time) + '.png', bbox_inches='tight')
     plt.close()
 
 init_conds_list = np.array([val for val in init_conds.values()])

@@ -17,8 +17,7 @@ MODEL_PARAMETER_LIST = ['PermMCPPropanediol','PermMCPPropionaldehyde','PermMCPPr
                         'VmaxPr', 'KmPrPropionyl',
                         'VmaxQf', 'KmQfPropionaldehyde',
                         'VmaxQr', 'KmQrPropanol',
-                        'VmaxLf', 'KmLPropionyl',
-                        'ncells']
+                        'VmaxLf', 'KmLPropionyl']
 
 
 VARIABLE_NAMES = ['PROPANEDIOL_MCP', 'PROPIONALDEHYDE_MCP', 'PROPANOL_MCP', 'PROPIONYL_MCP', 'PROPIONATE_MCP',

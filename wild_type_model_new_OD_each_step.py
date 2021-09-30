@@ -23,7 +23,7 @@ from constants import HRS_TO_SECS, VARIABLE_INIT_NAMES, OD_TO_COUNT_CONC, MODEL_
 
 class WildTypeEachStep:
     def __init__(self, optical_density_ts, fin_exp_time, mcp_surface_area, mcp_volume,
-                 cell_surface_area, cell_volume, external_volume):
+                 cell_surface_area, cell_volume, external_volume,n_discrete_tp):
         """
         Initializes parameters to be used numerical scheme
         :param optical_density_ts: optical density at any given time during experiment (in OD)
@@ -52,7 +52,7 @@ class WildTypeEachStep:
         self.nvars = 5*3
         self.optical_density_ts = optical_density_ts
         self.fin_exp_time = fin_exp_time
-        self.n_discrete_tp = 10000
+        self.n_discrete_tp = n_discrete_tp
         self._discretize_optical_density()
 
         # set jacobian for ODE integration

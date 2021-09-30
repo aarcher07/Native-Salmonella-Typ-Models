@@ -6,11 +6,11 @@ y0 = [0]
 fin_exp_time = 1
 time_concat = []
 sol_concat = []
-n_discrete_tp = 100000
+n_discrete_tp = 10
 
 time_discrete = np.linspace(0, 1, num=n_discrete_tp)
 optical_density_ts_disc = []
-f = lambda t: np.sin(2*np.pi*t)
+f = lambda t: np.sin(t*2*10*np.pi)
 
 for i in range(n_discrete_tp - 1):
     mean_OD = quad(f, time_discrete[i], time_discrete[i + 1])[0] / (time_discrete[i+1] - time_discrete[i])
@@ -25,7 +25,7 @@ plt.show()
 for i in range(n_discrete_tp - 1):
 
     #create OD problem
-    ds = lambda t, x: optical_density_ts_disc[i] + np.sin(10*2*np.pi*x)
+    ds = lambda t, x: optical_density_ts_disc[i]*np.sin(10*2*np.pi*x)+ 1
 
     #solve ODE
     sol = solve_ivp(ds, [time_discrete[i], time_discrete[i + 1]], y0, method="LSODA",
@@ -38,7 +38,7 @@ for i in range(n_discrete_tp - 1):
     y0 = sol.y[:, -1].copy()
 
 plt.plot(time_concat, sol_concat, label='Model 4')
-ds = lambda t, x: f(t)
+ds = lambda t, x: f(t)*np.sin(10*2*np.pi*x) + 1
 sol = solve_ivp(ds, [0, 1], [0], method="LSODA",
                 t_eval=np.linspace(0,1, num=5*n_discrete_tp, endpoint=False), atol=1e-6,
                 rtol=1e-6)
