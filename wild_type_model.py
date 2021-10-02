@@ -96,7 +96,7 @@ class WildType:
         d = np.zeros((len(x))).tolist()  # convert to list to allow use of symbolic derivatives
 
         # differential equation parameters
-        ncells = self.optical_density_ts(t) * OD_TO_COUNT_CONC * self.external_volume
+        ncells = self.optical_density_ts(t/HRS_TO_SECS) * OD_TO_COUNT_CONC * self.external_volume
         nmcps = params['nmcps']
         
 
