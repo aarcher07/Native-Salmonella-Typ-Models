@@ -17,7 +17,8 @@ MODEL_PARAMETER_LIST = ['PermMCPPropanediol','PermMCPPropionaldehyde','PermMCPPr
                         'VmaxPr', 'KmPrPropionyl',
                         'VmaxQf', 'KmQfPropionaldehyde',
                         'VmaxQr', 'KmQrPropanol',
-                        'VmaxLf', 'KmLPropionyl']
+                        'VmaxLf', 'KmLPropionyl',
+                        'ncells']#TODO: Remove
 
 
 VARIABLE_NAMES = ['PROPANEDIOL_MCP', 'PROPIONALDEHYDE_MCP', 'PROPANOL_MCP', 'PROPIONYL_MCP', 'PROPIONATE_MCP',
@@ -53,7 +54,7 @@ MODEL_PARAMETER_LIST_UNITS = {'PermMCPPropanediol' : "metre/seconds" ,
                               'KmQrPropanol' : "millimolar",
                               'VmaxLf' : "millimolar/seconds",
                               'KmLPropionyl' : "millimolar",
-                              'ncells': None
+                              'ncells': None #TODO: Remove
                               }
 
 VARIABLE_NAMES_UNITS = {'PROPANEDIOL_MCP' : "millimolar",
