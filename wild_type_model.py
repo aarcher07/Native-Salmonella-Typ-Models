@@ -3,8 +3,8 @@ The wild-type model contains native reaction pathway
 in the MCP; diffusion in the cell; diffusion from the cell 
 in the external volume.
 
-This model is currently in use. The DhaB-DhaT model assumes that there 
-are M identical MCPs within the cytosol and N identical growing cells within the
+This model is currently in use. The wild-type model assumes that there
+are M identical MCPs within the cytosol and N(t) identical growing cells within the
 external volume. From time scale analysis, gradients in the cell are removed.
 
 Programme written by aarcher07

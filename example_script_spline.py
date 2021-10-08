@@ -1,3 +1,10 @@
+"""
+Testing wild type model with a spline function trained on OD data.
+
+Programme written by aarcher07
+Editing History: See github history
+"""
+
 from wild_type_model import WildType
 import pandas as pd
 import matplotlib.pyplot as plt

@@ -1,9 +1,8 @@
 """
-Constants parameters 
+Constants parameters
 
 Programme written by aarcher07
-Editing History:
-- 1/3/21
+Editing History: See github history
 """
 
 HRS_TO_SECS = 60*60 # seconds per hour
@@ -17,8 +16,7 @@ MODEL_PARAMETER_LIST = ['PermMCPPropanediol','PermMCPPropionaldehyde','PermMCPPr
                         'VmaxPr', 'KmPrPropionyl',
                         'VmaxQf', 'KmQfPropionaldehyde',
                         'VmaxQr', 'KmQrPropanol',
-                        'VmaxLf', 'KmLPropionyl',
-                        'ncells']#TODO: Remove
+                        'VmaxLf', 'KmLPropionyl']
 
 
 VARIABLE_NAMES = ['PROPANEDIOL_MCP', 'PROPIONALDEHYDE_MCP', 'PROPANOL_MCP', 'PROPIONYL_MCP', 'PROPIONATE_MCP',
