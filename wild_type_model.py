@@ -56,7 +56,7 @@ class WildType:
         # set jacobian for ODE integration
         self._set_symbolic_state_vars()
         self._set_param_sp_symbols()
-        # self._set_symbolic_sderiv_conc_fun()
+        self._set_symbolic_sderiv_conc_fun()
 
     def _set_symbolic_state_vars(self):
         """
@@ -189,9 +189,10 @@ class WildType:
             y0[i] = init_conds[init_names]
 
         ds = lambda t, x: self._sderiv(t, x, params)
+        ds_jac = lambda t, x: self._sderiv_jac_conc_fun(t, x, params)
 
         #solve ODE
-        sol = solve_ivp(ds, [0, self.fin_exp_time * HRS_TO_SECS], y0, method="LSODA",
+        sol = solve_ivp(ds, [0, self.fin_exp_time * HRS_TO_SECS], y0, method="LSODA", jac=ds_jac,
                         t_eval=np.linspace(0, self.fin_exp_time * HRS_TO_SECS, n_time_pts),atol=1e-6, rtol=1e-6)
 
         return sol.t, sol.y.T

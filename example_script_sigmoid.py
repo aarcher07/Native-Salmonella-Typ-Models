@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
 from constants import HRS_TO_SECS, OD_TO_COUNT_CONC
-
+import sympy as sp
 GC_ODs_N = pd.read_csv("data/GC_ODs_N.csv")
 Time = GC_ODs_N.loc[:,'Time'].astype(np.float64)
 
@@ -59,6 +59,13 @@ cell_volume = 4*np.pi/3*(cell_radius)**3 + np.pi*(cell_length - 2*cell_radius)*(
 
 # external volume geometry
 external_volume = 5e-5
+
+def sigmoid(x, L ,x0, k, b):
+    y = L / (1 + sp.exp(-k*(x-x0)))+b
+    return y
+fit_fun_log10 = lambda t: sigmoid(t, *popt)
+fit_fun = lambda t: 10**fit_fun_log10(t)
+
 wild_type_model = WildType(fit_fun, Time.iloc[-1], mcp_surface_area, mcp_volume,
                            cell_surface_area, cell_volume, external_volume)
 
