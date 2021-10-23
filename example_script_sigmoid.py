@@ -29,7 +29,7 @@ popt, pcov = curve_fit(sigmoid, Time, WT_a_log10, p0, method='dogbox')
 fit_fun_log10 = lambda t: sigmoid(t, *popt)
 
 # plot log10 data and spline
-t = np.linspace(0, Time.iloc[-1] + 100, num=int(1e3))
+t = np.linspace(0, Time.iloc[-1] + 50, num=int(1e3))
 plt.scatter(Time, WT_a_log10)
 plt.plot(t, fit_fun_log10(t))
 plt.legend(['data', 'Sigmoid'], loc='upper right')
